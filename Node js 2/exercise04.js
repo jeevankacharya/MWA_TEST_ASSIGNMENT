@@ -23,3 +23,9 @@ server
 
   })
   .listen(port, () => console.log(`Listening to port ${port}`));
+
+
+// const usingasync = http.createServer(function(req,res)
+// {
+//   res.wr
+// })
