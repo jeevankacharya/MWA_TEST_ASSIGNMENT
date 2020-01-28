@@ -1,55 +1,39 @@
-const express =require('express');
+var express = require('express')
+const superagent = require('superagent');
+const { flatMap, mergeMap, switchMap, map ,toArray } = require('rxjs/operators');
+const { from, of } = require('rxjs');
 
-const superagent =require('superagent');
 
-const {from} =require('rxjs');
+var app = express()
+app.set('strict routing', true)
+app.set('x-powered-by', false)
+app.set('case sensitive routing', true);
+app.disable('etag')
 
-const {map} =require('rxjs/operators');
+var port = 8080
 
-const app =express();
-app.enable("trust proxy");
-app.set("x-powered-by",false);
-app.enable("case sensitive routing");
-app.enable("strict routing", true);
+app.get('/users', function (request, response) {
 
- const port =8000;
- const url = "https://randomuser.me/api/?results=10";
+  superagent
+    .get('https://randomuser.me/api/?results=10')
+   .end((err, result) => {
+       if (err) throw err;
 
- app.get("/user", (req, res) => {
-    const users = getUser();
-  
-    res.links({
-        next: "https://randomuser.me/api/?results=10&page=2",
-        last: "https://randomuser.me/api/?results=10&page=10"
+      response.status(200)
+      response.set('Content-Type', 'application/json')
+      var data = result.body.results.flatMap(function (result) {
+          return [{ "firstname": result.name.first, "lastname": result.name.last }];
       });
-
-      from(users)
-      .pipe(
-        map(user => {
-          return user.data.results.map(u => {
-            return {
-              first: u.name.first,
-              last: u.name.last
-            };
-          });
-        })
-      )
-      .subscribe(data => {
       
-        res.send(data);
-      });
-  });
-  
-  //fetch the user data using superagent
-  async function getUser(page) {
-    try {
-      const response = await superagent.get(url.concat("&", page));
-  
-      return response;
-    } catch (error) {
-      console.log(error);
-    }
-  }
-  
-  app.listen(port, _ => console.log(`Listening to port ${port}`));
-  
+      response.set('Cache-Control', 'public, max-age=86400');
+      response.links({
+          next: 'https://randomuser.me/api/?results=20',
+          last: 'https://randomuser.me/api/?results=30'
+      })
+      response.send(data)
+
+      response.end()
+    });
+
+
+}).listen(port)
